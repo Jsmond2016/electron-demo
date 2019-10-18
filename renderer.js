@@ -1,5 +1,8 @@
-alert(process.versions.node)
+const { ipcRenderer } = requeire('electron')
 
 window.addEventListener("DOMContentLoaded", () => {
-    alert("hello, dom")
+    ipcRenderer.send("message", "hello, world~~")
+    ipcRenderer.on("reply", (event, arg) => {
+        document.getElementById("reply").innerHTML = arg
+    })
 })

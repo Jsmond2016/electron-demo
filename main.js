@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron')
+const { app, BrowserWindow, ipcMain } = require('electron')
 
 app.on('ready', () => {
   const mainWindow = new BrowserWindow({
@@ -11,15 +11,10 @@ app.on('ready', () => {
 
   mainWindow.loadFile("index.html")
 
-  const secondWindow = new BrowserWindow({
-    width: 600,
-    height: 400,
-    webPreferences: {
-      nodeIntegration: true //设置这个可以使用 nodejs 的API
-    },
-    parent: mainWindow // 定义属性 父窗口，当父窗口关闭的时候，子窗口也会关闭
+  ipcMain.on("message", (event, arg) => {
+    console.log(arg)
+    event.sender.send("reply", "I got your message")
   })
 
-  secondWindow.loadFile("second.html")
 })
 

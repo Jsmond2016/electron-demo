@@ -13,6 +13,7 @@
 
 - [electron-github](https://github.com/electron/electron)
 - [electron-官网](https://electronjs.org) 
+- [elctron-官方文档](https://electronjs.org/docs)
 - [Electron在Windows下的环境搭建](https://www.cnblogs.com/wangjian8888/p/7988439.html)
 
 ## 官网-demo
@@ -69,11 +70,11 @@ $ npm install && npm start
 - 主进程和渲染进程
   - 主进程
 
-![1571325231887](electron-demo/img/1571325231887.png)
+![1571325231887](./img/1571325231887.png)
 
 - 渲染进程
 
-![1571325325508](electron-demo/img/1571325325508.png)
+![1571325325508](./img/1571325325508.png)
 
 
 
@@ -155,4 +156,75 @@ window.addEventListener("DOMContentLoaded", () => {
     alert("hello, dom")
 })
 ```
+
+
+
+## 进程通信
+
+![1571366865932](./img/1571366865932.png)
+
+- ipcRenderer 和 ipcMain 的使用
+
+- 发送信息
+
+在 `renderer.js` 中 发送
+
+```js
+const { ipcRenderer } = requeire('electron')
+
+window.addEventListener("DOMContentLoaded", () => {
+    // 发送信息
+    ipcRenderer.send("message", "hello, world~~")
+})
+```
+
+在 `main.js` 中接受，并回复
+
+```js
+const { app, BrowserWindow, ipcMain } = require('electron')
+
+app.on('ready', () => {
+  const mainWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    webPreferences: {
+      nodeIntegration: true //设置这个可以使用 nodejs 的API
+    }
+  })
+
+  mainWindow.loadFile("index.html")
+
+    // 这里 监听传送过来的信息
+  ipcMain.on("message", (event, arg) => {
+    console.log(arg)
+    event.sender.send("reply", "I got your message")
+  })
+
+})
+
+```
+
+在 `renderer.js` 中接受到传来的信息
+
+```js
+const { ipcRenderer } = requeire('electron')
+
+window.addEventListener("DOMContentLoaded", () => {
+    ipcRenderer.send("message", "hello, world~~")
+    // 接受并写入 dom
+    ipcRenderer.on("reply", (event, arg) => {
+        document.getElementById("reply").innerHTML = arg
+    })
+})
+```
+
+
+
+
+
+
+
+
+
+
 
