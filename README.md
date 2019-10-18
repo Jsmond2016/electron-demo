@@ -148,3 +148,11 @@ app.on('ready', () => {
 
 - 新建 `renderer.js` 文件，它既可以使用 nodejs 的 API，也可以使用 DOM 的 API
 
+```js
+alert(process.versions.node)
+
+window.addEventListener("DOMContentLoaded", () => {
+    alert("hello, dom")
+})
+```
+
