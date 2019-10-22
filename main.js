@@ -13,7 +13,9 @@ app.on('ready', () => {
 
   ipcMain.on("message", (event, arg) => {
     console.log(arg)
-    event.sender.send("reply", "I got your message")
+    // event.sender.send("reply", "I got your message")
+    // 也可以使用下面的方式 因为 event.sender === mainWindow
+    mainWindow.send("reply", "I got your message")
   })
 
 })
