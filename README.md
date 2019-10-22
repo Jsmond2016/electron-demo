@@ -248,7 +248,183 @@ renderer
 
 ### 首页样式
 
+- 安装 bootstrap: `npm install bootstrap --save`
+- 引入 css
+
+```html
+<link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
+```
+
+- 引入 [bootstrap](https://getbootstrap.com/docs/4.3/getting-started/introduction/) 相关组件：
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>本地播放器</title>
+    <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Hello, my player</h1>
+        <button type="button" class="btn btn-primary btn-lg btn-block">添加到歌曲库</button>
+    </div>
+</body>
+</html>
+```
+
+- 修改入口文件 main.js
+
+```js
+const { app, BrowserWindow, ipcMain } = require('electron')
+
+app.on('ready', () => {
+  const mainWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    webPreferences: {
+      nodeIntegration: true //设置这个可以使用 nodejs 的API
+    }
+  })
+
+  mainWindow.loadFile("./renderer/index.html") // 关键在这里
+
+})
+
+
+```
+
+- 添加边距样式（学习下 bootstrap 的使用）
+
+![1571727904042](./img/1571727904042.png)
+
+这里：
+
+- `m` 表示 margin
+- `p` 表示 padding
+- 第二部分 `t,b,l,r,x,y` 分别表示 上、下、左、右、水平方向、竖直方向
+- 第三部分 边距或者 padding 大小
+
+代码：
+
+```html
+<body>
+    <div class="container mt-4">
+        <h1>Hello, my player</h1>
+        <button type="button" class="btn btn-primary btn-lg btn-block mt-4">添加到歌曲库</button>
+    </div>
+</body>
+```
+
+测试主窗口和渲染窗口的通信：
+
+编写 `index.html` 文件，引入 js
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>本地播放器</title>
+    <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Hello, my player</h1>
+        <button type="button" id="add-music-button" class="btn btn-primary btn-lg btn-block mt-4">添加到歌曲库</button>
+    </div>
+    
+    <script>
+        // 这里使用 require 的方式引入，因为这里不仅可以使用 js 的方式，也可以使用 node 的方式
+        require("./index.js")
+    </script>
+</body>
+</html>
+```
+
+
+
+编写 `index.js` 文件
+
+```js
+const { ipcRenderer } = require("electron")
+
+document.getElementById("add-music-button").addEventListener("click", () => {
+    ipcRenderer.send('add-music-window', 'hello')
+})
+```
+
+编写主程序 `main.js` 
+
+```js
+const { app, BrowserWindow, ipcMain } = require('electron')
+
+app.on('ready', () => {
+  const mainWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    webPreferences: {
+      nodeIntegration: true //设置这个可以使用 nodejs 的API
+    }
+  })
+
+  mainWindow.loadFile("./renderer/index.html")
+  
+  ipcMain.on('add-music-window', (event, args) => {
+    console.log(args) // hello
+  })
+})
+```
+
+
+
 ### 创建添加音乐窗口
+
+编写 `add.html` 
+
+
+
+编写 `add.js` 
+
+
+
+编写 `main.js` 
+
+```js
+const { app, BrowserWindow, ipcMain } = require('electron')
+
+app.on('ready', () => {
+  const mainWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    webPreferences: {
+      nodeIntegration: true //设置这个可以使用 nodejs 的API
+    }
+  })
+
+  mainWindow.loadFile("./renderer/index.html")
+  
+  ipcMain.on('add-music-window', (event, args) => {
+    const addWindow = new BrowserWindow({
+      width: 500,
+      height: 400,
+      webPreferences: {
+        nodeIntegration: true //设置这个可以使用 nodejs 的API
+      },
+      parent: mainWindow
+    })
+    addWindow.loadFile('./renderer/add.html')
+  })
+
+})
+
+
+```
 
 
 

@@ -9,13 +9,18 @@ app.on('ready', () => {
     }
   })
 
-  mainWindow.loadFile("index.html")
-
-  ipcMain.on("message", (event, arg) => {
-    console.log(arg)
-    // event.sender.send("reply", "I got your message")
-    // 也可以使用下面的方式 因为 event.sender === mainWindow
-    mainWindow.send("reply", "I got your message")
+  mainWindow.loadFile("./renderer/index.html")
+  
+  ipcMain.on('add-music-window', (event, args) => {
+    const addWindow = new BrowserWindow({
+      width: 500,
+      height: 400,
+      webPreferences: {
+        nodeIntegration: true //设置这个可以使用 nodejs 的API
+      },
+      parent: mainWindow
+    })
+    addWindow.loadFile('./renderer/add.html')
   })
 
 })
