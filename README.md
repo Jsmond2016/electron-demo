@@ -575,6 +575,103 @@ ipcMain.on('open-music-file', () => {
   })
 ```
 
+### 展示添加的文件列表
+
+几个知识点：
+
+- 主程序给渲染进程发送事件
+- 渲染进程监听事件作出相应
+- node API 中 `path.basename(xxx)` 的使用
+- `reduce`  的使用
+- [BootStrap-List](https://getbootstrap.com/docs/4.3/components/list-group/)
+
+
+
+代码如下：
+
+- `main.js` 文件
+
+```js
+  ipcMain.on('open-music-file', (event) => {
+    dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'Music-Select', extensions: ['mp3'] }, // 过滤看到的文件类型
+      ]
+    }, (files) => {
+        if (files) {
+          event.sender.send('selected-file', files) // 发送给渲染进程-子窗口
+        }
+    })
+  })
+```
+
+- `add.js` 文件
+
+```js
+const { $ } = require("./helper")
+const { ipcRenderer } = require("electron")
+const path = require('path')
+
+
+$("select-music").addEventListener("click", () => {
+    ipcRenderer.send('open-music-file')
+})
+
+const renderListHTML = (pathes) => {
+    const musicList = $('musicList')
+    const musicListItem = pathes.reduce((html, music) => {
+        html += `<li class="list-group-item">${path.basename(music)}</li>`
+        return html
+    }, '')
+    musicList.innerHTML = `<ul class="list-group">${musicListItem}</ul>`
+}
+
+ipcRenderer.on('selected-file', (event, path) => {
+    if (Array.isArray(path)) {
+        renderListHTML(path)
+    }
+})
+```
+
+
+
+### 使用Electron Store 持久化数据
+
+![1571815736033](./img/1571815736033.png)
+
+- [Electron-Store](https://github.com/sindresorhus/electron-store)
+- 安装Electron-Store：`npm install electron-store`
+- 基本使用：
+  - 引入：`const Store = require('electron-store');`
+  - `store.set(xxx,yyy)`
+  - `store.get(xxx)`
+  - `store.delete(xxx)`
+  - `app.getPath('userData')`
+
+```js
+const Store = require('electron-store');
+
+const store = new Store();
+
+store.set('unicorn', '🦄');
+console.log(store.get('unicorn'));
+//=> '🦄'
+
+// Use dot-notation to access nested properties
+store.set('foo.bar', true);
+console.log(store.get('foo'));
+//=> {bar: true}
+
+store.delete('unicorn');
+console.log(store.get('unicorn'));
+//=> undefined
+```
+
+
+
+
+
 
 
 ## 播放器应用之播放器窗口
