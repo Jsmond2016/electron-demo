@@ -78,7 +78,9 @@ $ npm install && npm start
 
 
 
-### 安装 nodemon 来监听 mainjs 的变化
+### 安装 nodemon 
+
+> 安装 nodemon 来监听 main.js 的变化
 
 执行如下命令：
 
@@ -423,7 +425,154 @@ app.on('ready', () => {
 
 })
 
+```
 
+
+
+### 创建窗口类（代码优化）
+
+编写 `main.js` 
+
+```js
+const { app, BrowserWindow, ipcMain } = require('electron')
+
+class AppWindow extends BrowserWindow{
+  constructor(config, fileLocation) {
+    const basicConfig = {
+      width: 800,
+      height: 600,
+      webPreferences: {
+        nodeIntegration: true //设置这个可以使用 nodejs 的API
+      }
+    }
+
+    const finalConfig = { ...basicConfig, ...config } // ES6语法，效果等同上面
+    super(finalConfig)
+    this.loadFile(fileLocation)
+  }
+}
+
+app.on('ready', () => {
+  const mainWindow = new AppWindow({}, './renderer/index.html') // 重构
+  
+  ipcMain.on('add-music-window', (event, args) => {
+    const addWindow = new AppWindow({ // 重构
+      width: 500,
+      height: 400,
+      webPreferences: {
+        nodeIntegration: true //设置这个可以使用 nodejs 的API
+      },
+      parent: mainWindow
+    }, './renderer/add.html')
+  })
+
+})
+
+
+```
+
+优雅地显示窗口：
+
+- 文档：[优雅地显示窗口](https://electronjs.org/docs/api/browser-window)
+
+![1571735522879](./img/1571735522879.png)
+
+代码为：
+
+```js
+const { app, BrowserWindow, ipcMain } = require('electron')
+
+class AppWindow extends BrowserWindow{
+  constructor(config, fileLocation) {
+    const basicConfig = {
+      width: 800,
+      height: 600,
+      webPreferences: {
+        nodeIntegration: true //设置这个可以使用 nodejs 的API
+      }
+    }
+
+    //const finalConfig = Object.assign(basicConfig, config) // ES5写法 用后面的覆盖前面的
+    const finalConfig = { ...basicConfig, ...config } // ES6语法，效果等同上面
+    super(finalConfig)
+    this.loadFile(fileLocation)
+      // 优雅地显示窗口
+    this.once('ready-to-show', () => {
+      this.show()
+    })
+  }
+}
+
+//...
+
+})
+
+```
+
+### 优雅地显示窗口
+
+> 使用 dialog 可以帮助我们建立操作系统原生的对话框
+
+- [dialog-文档](https://electronjs.org/docs/api/dialog)
+- 简单封装工具函数 helper
+
+```js
+exports.$ = (id) => {
+   return document.getElementById(id)
+}
+```
+
+- `add.html` 中
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>添加音乐</title>
+    <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Hello, my player</h1>
+        <button type="button" id="select-music" class="btn btn-outline-primary btn-lg btn-block mt-4">选择音乐</button>
+    </div>
+    <script>
+        require("./add.js")
+    </script>
+</body>
+</html>
+```
+
+- `add.js` 中
+
+```js
+const { $ } = require("./helper")
+const { ipcRenderer } = require("electron")
+
+$("select-music").addEventListener("click", () => {
+    ipcRenderer.send('open-music-file')
+})
+```
+
+- 代码：`main.js` 中
+
+```js
+const { app, BrowserWindow, ipcMain, dialog } = require('electron')
+
+// ...省略部分代码  
+ipcMain.on('open-music-file', () => {
+    dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections'], // 选择需要的功能
+      filters: [
+        { name: 'Music-Select', extensions: ['mp3'] }, // 过滤后看到的文件类型
+      ]
+    }, (files) => {
+        console.log(files) // 打印出选中的 mp3 文件
+    })
+  })
 ```
 
 

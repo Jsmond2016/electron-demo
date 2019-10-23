@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 
 class AppWindow extends BrowserWindow{
   constructor(config, fileLocation) {
@@ -14,6 +14,9 @@ class AppWindow extends BrowserWindow{
     const finalConfig = { ...basicConfig, ...config } // ES6语法，效果等同上面
     super(finalConfig)
     this.loadFile(fileLocation)
+    this.once('ready-to-show', () => {
+      this.show()
+    })
   }
 }
 
@@ -33,6 +36,17 @@ app.on('ready', () => {
       },
       parent: mainWindow
     }, './renderer/add.html')
+  })
+
+  ipcMain.on('open-music-file', () => {
+    dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'Music-Select', extensions: ['mp3'] }, // 过滤看到的文件类型
+      ]
+    }, (files) => {
+        console.log(files)
+    })
   })
 
 })
