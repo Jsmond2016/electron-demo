@@ -670,11 +670,63 @@ console.log(store.get('unicorn'));
 
 
 
+### 音乐持久化数据存储类
+
+- 安装 uuidv4：`npm install uuid --save`
+
+新建 `musicDataStore.js` 文件
+
+```js
+const Store = require('electron-store')
+const uuidv4 = require('uuid/v4')
+const path = require('path')
+
+class DataStore extends Store{
+    constructor(settings) {
+        super(settings)
+        this.tracks = [] // 暂存音乐文件
+    }
+
+    saveTracks() {
+        this.set('tracks', this.tracks)
+        return this
+    }
+
+    getTracks() {
+        return this.get('tracks') || []
+    }
+
+    addTracks(tracks) {
+        const trackWithProps = tracks.map(track => {
+            return {
+                id: uuidv4(),
+                path: track,
+                filename: path.basename(track)
+            }
+        }).filter(track => { // 去重
+            const currentTrackPath = this.getTracks().map(track => track.path)
+            return currentTrackPath.indexOf(track.path) < 0
+        })
+        this.tracks = [ ...this.tracks, ...trackWithProps ]
+        return this.saveTracks()
+
+    }
+}
+
+module.exports = DataStore
+```
+
+
+
+ 
+
 
 
 
 
 ## 播放器应用之播放器窗口
+
+### 获取数据渲染主窗口列表之概念
 
 
 
