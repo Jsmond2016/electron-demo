@@ -718,19 +718,78 @@ module.exports = DataStore
 
 
 
- 
-
-
-
-
-
 ## 播放器应用之播放器窗口
 
 ### 获取数据渲染主窗口列表之概念
 
+### 获取数据渲染主窗口列表之编码
 
+- 图标库：[Font Awesome](http://fontawesome.dashgame.com/)
+- [bootstrap-flex](https://getbootstrap.com/docs/4.3/utilities/flex/)
+- `did-finish-load` 的使用
 
+编写 `index.js` 文件
 
+```js
+const { ipcRenderer } = require("electron")
+const { $ } = require("./helper")
+
+$("add-music-button").addEventListener("click", () => {
+    ipcRenderer.send('add-music-window', 'hello')
+})
+
+const renderListHTML = (tracks) => {
+    const tracksList = $('tracksList')
+    const trackListHTML = tracks.reduce((html, track) => {
+        html += `<li class="row music-track list-group-item d-flex justify-content-between align-items-center"> 
+            <div class="col-10">
+                <i class="fas fa-music mr-2"></i>
+                <b>${track.fileName}</b>
+            </div>
+            <div class="col-2">
+                <i class="fas fa-play mr-2"></i>
+                <i class="fas fa-trash-alt"></i>
+            </div>
+        </li>`
+        return html
+    }, '')
+    const emptyTrackHTMl = `<div class="alert alert-primary">还没有添加任何音乐</div>`
+    tracksList.innerHTML = tracks.length ? `<ul class="list-group">${trackListHTML}</ul>` : emptyTrackHTMl
+}
+
+ipcRenderer.on('get-tracks', (event, tracks) => {
+    console.log('index-getTracks', tracks);
+    renderListHTML(tracks)
+})
+```
+
+注意几个地方：
+
+- Bootstrap 的使用
+
+  - 使用 flex：`d-flex`
+  - 外层包裹项：`list-group-item`
+  - 水平和垂直居中：`justify-content-between align-items-center` 
+
+- font-awsome 图标使用和 cdn失效问题：
+
+  - font-awsome css 引入无效：
+
+  ```html
+  <link href="//netdna.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  ```
+
+  - 使用 cdn 的引用
+
+  ```html
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.min.css" />
+  ```
+  - 图标使用：
+    - 音乐：`<i class="fas fa-music mr-2"></i>` 使用了 bootstrap 右边距为2
+    - 播放：`<i class="fas fa-play mr-2"></i>`
+    - 垃圾桶：`<i class="fas fa-trash-alt"></i>`
+
+- js模板插入
 
 
 
