@@ -791,9 +791,121 @@ ipcRenderer.on('get-tracks', (event, tracks) => {
 
 - js模板插入
 
+### 播放音乐难点分析
+
+![1572327857875](./img/1572327857875.png)
+
+![1572327923382](./img/1572327923382.png)
+
+![1572328080134](./img/1572328080134.png)
 
 
 
+### 主窗口播放音乐
+
+![1572329898228](./img/1572329898228.png)
 
 
 
+### 添加音乐播放状态
+
+主要有几个知识点：
+
+- 事件代理
+- 自定义属性 `data`  和  其获取方式 `dataset`
+
+编辑 `index.js` 文件
+
+```js
+const { ipcRenderer } = require("electron")
+const { $ } = require("./helper")
+
+let musicAudio = new Audio()
+let allTracks
+let currentTrack
+
+
+$("add-music-button").addEventListener("click", () => {
+    ipcRenderer.send('add-music-window', 'hello')
+})
+
+const renderListHTML = (tracks) => {
+    const tracksList = $('tracksList')
+    const trackListHTML = tracks.reduce((html, track) => {
+        html += `<li class="row music-track list-group-item d-flex justify-content-between align-items-center"> 
+            <div class="col-10">
+                <i class="fas fa-music mr-2"></i>
+                <b>${track.filename}</b>
+            </div>
+            <div class="col-2">
+                <i class="fas fa-play mr-2" data-id="${track.id}"></i>
+                <i class="fas fa-trash-alt" data-id="${track.id}"></i>
+            </div>
+        </li>`
+        return html
+    }, '')
+    const emptyTrackHTMl = `<div class="alert alert-primary">还没有添加任何音乐</div>`
+    tracksList.innerHTML = tracks.length ? `<ul class="list-group">${trackListHTML}</ul>` : emptyTrackHTMl
+}
+
+ipcRenderer.on('get-tracks', (event, tracks) => {
+    console.log('index-getTracks', tracks);
+    allTracks = tracks
+    renderListHTML(tracks)
+})
+
+$('tracksList').addEventListener('click', function(event) {
+    event.preventDefault()
+    const { dataset, classList } = event.target
+    const id = dataset && dataset.id
+
+    if(id && classList.contains('fa-play')){
+        if(currentTrack && currentTrack.id === id) {
+            musicAudio.play()
+        } else {
+            currentTrack = allTracks.find(track => track.id === id)
+            musicAudio.src = currentTrack.path
+            musicAudio.play()
+            const resetIconEle = document.querySelector(".fa-pause")
+            if(resetIconEle){
+                resetIconEle.classList.replace('fa-pause', 'fa-play')
+            }
+        }
+
+        classList.replace('fa-play', 'fa-pause')
+        
+    } else if(id && classList.contains('fa-pause')) {
+        musicAudio.pause()
+        classList.replace('fa-pause', 'fa-play')
+    }else if(id && classList.contains('fa-trash-alt')) {
+        ipcRenderer.send('delete-track', id)
+    }
+})
+```
+
+编辑 `musicDataStore.js` 文件
+
+```js
+ deleteTrack(deleteId) {
+        this.tracks = this.tracks.filter(item => item.id !== deleteId)
+        return this.saveTracks()
+    }
+```
+
+编辑 `main.js` 文件
+
+```js
+  ipcMain.on('delete-track', (event, id) => {
+    const updateTracks = myStore.deleteTrack(id).getTracks()
+    mainWindow.send('get-tracks', updateTracks)
+  })
+```
+
+
+
+说明：
+
+- 首先，歌曲最外层的 `tracksList` 添加事件代理，点击其内部的某个元素的时候，会**冒泡到这一层**。同时，拿到被点击的**元素的 dataset ，classList 等属性，获取到被点击元素的 id**
+- 然后判断获取到的元素的 **播放状态** ，以及点击时的状态变更。
+- 当播放一首歌然后去点击播放另一首歌的时候，需要将其他正在播放的歌曲关闭（状态为未播放）
+- 当点击删除的时候，发送事件给主窗口，删除该歌曲。
