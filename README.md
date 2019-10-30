@@ -909,3 +909,212 @@ $('tracksList').addEventListener('click', function(event) {
 - 然后判断获取到的元素的 **播放状态** ，以及点击时的状态变更。
 - 当播放一首歌然后去点击播放另一首歌的时候，需要将其他正在播放的歌曲关闭（状态为未播放）
 - 当点击删除的时候，发送事件给主窗口，删除该歌曲。
+
+
+
+
+
+### 添加音乐播放状态（下）
+
+- help 事件计算方法：
+- [bootstrap-progressbar](https://getbootstrap.com/docs/4.3/components/progress/)
+
+编写 index.html 文件
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>本地播放器</title>
+    <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./index.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Hello, my player</h1>
+        <button type="button" id="add-music-button" class="btn btn-primary btn-lg btn-block mt-4">添加到歌曲库</button>
+        <div id="tracksList" class="mt-4"></div>
+    </div>
+      <!-- 以下为新增代码 -->
+    <div class="container fixed-bottom bg-white pb-4">
+        <hr>
+        <div class="row my-2" id="player-status">
+        </div>
+        <div class="progress">
+            <div class="progress-bar bg-success" id="player-progress" role="progressbar" style="width: 0%" >
+                0%
+            </div>
+        </div>
+    </div>
+    <script>
+        require("./index.js")
+    </script>
+</body>
+</html>
+```
+
+编写 helper.js 文件
+
+```js
+exports.$ = (id) => {
+   return document.getElementById(id)
+}
+
+exports.convertDuration = (time) => {
+   // 计算分钟，向下取整，单位数 返回 '01'，多位数返回 '010'
+   const minutes = "0" + Math.floor(time / 60)
+   // 计算秒数单数返回 '02'， 多位数返回 '020'
+   const seconds = "0" + Math.floor(time - minutes * 60)
+
+   return minutes.substr(-2) + ':' + seconds.substr(-2)
+}
+```
+
+
+
+编写 index.js 文件
+
+```js
+const { ipcRenderer } = require("electron")
+const { $ , convertDuration } = require("./helper")
+
+let musicAudio = new Audio()
+let allTracks
+let currentTrack
+
+
+$("add-music-button").addEventListener("click", () => {
+    ipcRenderer.send('add-music-window', 'hello')
+})
+
+const renderListHTML = (tracks) => {
+    const tracksList = $('tracksList')
+    const trackListHTML = tracks.reduce((html, track) => {
+        html += `<li class="row music-track list-group-item d-flex justify-content-between align-items-center"> 
+            <div class="col-10">
+                <i class="fas fa-music mr-2"></i>
+                <b>${track.filename}</b>
+            </div>
+            <div class="col-2">
+                <i class="fas fa-play mr-2" data-id="${track.id}"></i>
+                <i class="fas fa-trash-alt" data-id="${track.id}"></i>
+            </div>
+        </li>`
+        return html
+    }, '')
+    const emptyTrackHTMl = `<div class="alert alert-primary">还没有添加任何音乐</div>`
+    tracksList.innerHTML = tracks.length ? `<ul class="list-group">${trackListHTML}</ul>` : emptyTrackHTMl
+}
+
+ipcRenderer.on('get-tracks', (event, tracks) => {
+    console.log('index-getTracks', tracks);
+    allTracks = tracks
+    renderListHTML(tracks)
+})
+// 主要为如下代码
+const updateProgrssHTML = (currentTime, duration) => {
+    const progress = Math.floor(currentTime / duration * 100)
+    const bar = $('player-progress')
+    bar.innerHTML = progress + '%'
+    bar.style.width = progress + '%'
+    const seeker = $('current-seeker')
+    console.log(convertDuration(currentTime))
+    seeker.innerHTML = convertDuration(currentTime)
+}
+const renderPlayerHTML = (musicName, duration) => {
+    const player = $('player-status')
+    const html = `<div class="col font-weight-bold"> 
+                    正在播放：${musicName}
+                  </div>
+                  <div class="col">
+                    <span id="current-seeker">00:00</span> / ${convertDuration(duration)}
+                  </div>
+    `
+        player.innerHTML = html
+}
+
+musicAudio.addEventListener('loadedmetadata', () => {
+    //渲染播放器状态
+    renderPlayerHTML(currentTrack.filename, musicAudio.duration)
+})
+
+musicAudio.addEventListener('timeupdate', () => {
+    //更新播放器状态
+    updateProgrssHTML(musicAudio.currentTime, musicAudio.duration) // 传入音乐的当前播放时间和总时长
+})
+
+$('tracksList').addEventListener('click', function(event) {
+    event.preventDefault()
+    const { dataset, classList } = event.target
+    const id = dataset && dataset.id
+
+    if(id && classList.contains('fa-play')){
+        if(currentTrack && currentTrack.id === id) {
+            musicAudio.play()
+        } else {
+            currentTrack = allTracks.find(track => track.id === id)
+            musicAudio.src = currentTrack.path
+            musicAudio.play()
+            const resetIconEle = document.querySelector(".fa-pause")
+            if(resetIconEle){
+                resetIconEle.classList.replace('fa-pause', 'fa-play')
+            }
+        }
+
+        classList.replace('fa-play', 'fa-pause')
+        
+    } else if(id && classList.contains('fa-pause')) {
+        musicAudio.pause()
+        classList.replace('fa-pause', 'fa-play')
+    }else if(id && classList.contains('fa-trash-alt')) {
+        ipcRenderer.send('delete-track', id)
+    }
+})
+```
+
+
+
+## Electron 打包
+
+- [Electron-builder](https://github.com/electron-userland/electron-builder)
+- 安装 `npm install electron-builder --save-dev` 
+- windows 平台中，上面的命令安装失败（或者是网络问题）
+- 使用 yarn 安装 ` yarn add electron-builder --save-dev ` 这里会有点慢
+- 在 package.json 中添加如下配置
+
+```json
+"build": {
+    "appId": "com.xxx.app",
+    "mac": {
+      "target": ["dmg","zip"]
+    },
+    "win": {
+      "target": ["nsis","zip"]
+    }
+},
+"scripts": {
+    "dist": "electron-builder --win --x64"
+},
+```
+
+- 执行 `npm run dist` 命令，发现报错：
+
+```js
+⨯ Package "electron-builder" is only allowed in "devDependencies". Please remove it from the "dependencies" section in your package.json.  stackTrace=rror: Package "electron-builder" is only allowed in "devDependencies". Please remove it from the "dependencies" section in your package.json.
+```
+
+我们只需要将 package.json 中的 dependencies 中的 electron-builder 删除即可
+
+再次执行 `npm run dist` 打包完成
+
+
+
+## 参考资料
+
+- 学习教程：[Electron开发仿网易云音乐播放器](https://coding.imooc.com/learn/list/351.html)
+- [electron打包：electron-packager及electron-builder两种方式实现（for Windows）](https://blog.csdn.net/johnf_nash/article/details/100611474)
+
